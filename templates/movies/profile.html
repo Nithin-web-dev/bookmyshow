@@ -1,0 +1,96 @@
+{% extends "users/basic.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="mb-4">My Profile</h2>
+            
+            <!-- User Info -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">User Information</h5>
+                    <p><strong>Username:</strong> {{ user.username }}</p>
+                    <p><strong>Email:</strong> {{ user.email }}</p>
+                    <p><strong>Member since:</strong> {{ user.date_joined|date:"F d, Y" }}</p>
+                </div>
+            </div>
+
+            <!-- Upcoming Bookings -->
+            <h3 class="mb-3">Upcoming Bookings</h3>
+            {% if upcoming_bookings %}
+                <div class="row">
+                    {% for booking in upcoming_bookings %}
+                        <div class="col-md-4 mb-4">
+                            <div class="card">
+                                {% if booking.show.movie.image %}
+                                    <img src="{{ booking.show.movie.image.url }}" class="card-img-top" alt="{{ booking.show.movie.name }}" style="height: 200px; object-fit: cover;">
+                                {% endif %}
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ booking.show.movie.name }}</h5>
+                                    <p class="card-text">
+                                        <strong>Theater:</strong> {{ booking.show.theater.name }}<br>
+                                        <strong>Date:</strong> {{ booking.show.date|date:"F d, Y" }}<br>
+                                        <strong>Time:</strong> {{ booking.show.time|time:"g:i A" }}<br>
+                                        <strong>Seat:</strong> {{ booking.seat.seat_number }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="alert alert-info">No upcoming bookings.</p>
+            {% endif %}
+
+            <!-- Past Bookings -->
+            <h3 class="mb-3 mt-4">Booking History</h3>
+            {% if past_bookings %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Movie</th>
+                                <th>Theater</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Seat</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for booking in past_bookings %}
+                                <tr>
+                                    <td>{{ booking.show.movie.name }}</td>
+                                    <td>{{ booking.show.theater.name }}</td>
+                                    <td>{{ booking.show.date|date:"F d, Y" }}</td>
+                                    <td>{{ booking.show.time|time:"g:i A" }}</td>
+                                    <td>{{ booking.seat.seat_number }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="alert alert-info">No booking history.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        transition: transform 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    .table {
+        background-color: white;
+    }
+    .alert {
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %} 

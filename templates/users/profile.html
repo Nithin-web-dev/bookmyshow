@@ -1,0 +1,187 @@
+{% extends "users/basic.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- User Profile Card -->
+        <div class="col-md-4">
+            <!-- Profile Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Profile Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="profile-info">
+                        <p><strong>Username:</strong> {{ user.username }}</p>
+                        <p><strong>Email:</strong> {{ user.email }}</p>
+                        {% if user.profile.phone_number %}
+                            <p><strong>Phone:</strong> {{ user.profile.phone_number }}</p>
+                        {% endif %}
+                        {% if user.profile.address %}
+                            <p><strong>Address:</strong> {{ user.profile.address }}</p>
+                        {% endif %}
+                        <p><strong>Member since:</strong> {{ user.date_joined|date:"F d, Y" }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account Management -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Account Management</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <a href="{% url 'reset_password' %}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-key"></i> Change Password
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action" data-toggle="modal" data-target="#editProfileModal">
+                            <i class="fas fa-user-edit"></i> Edit Profile
+                        </a>
+                        <a href="{% url 'logout' %}" class="list-group-item list-group-item-action text-danger">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bookings Section -->
+        <div class="col-md-8">
+            <!-- Upcoming Bookings -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Upcoming Shows</h4>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_bookings %}
+                        {% for booking in upcoming_bookings %}
+                            <div class="booking-item mb-3 p-3 border rounded">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h5>{{ booking.movie.name }}</h5>
+                                        <p class="mb-1"><strong>Theater:</strong> {{ booking.theater.name }}</p>
+                                        <p class="mb-1"><strong>Show Time:</strong> {{ booking.theater.time|date:"F d, Y g:i A" }}</p>
+                                        <p class="mb-1"><strong>Seat:</strong> {{ booking.seat.seat_number }}</p>
+                                        <p class="mb-1"><strong>Amount Paid:</strong> ₹{{ booking.amount_paid }}</p>
+                                        <p class="mb-0"><small class="text-muted">Booked on: {{ booking.booked_at|date:"F d, Y g:i A" }}</small></p>
+                                    </div>
+                                    <div class="col-md-4 text-right">
+                                        <span class="badge badge-success">Upcoming</span>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No upcoming bookings</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Past Bookings -->
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h4 class="mb-0">Past Shows</h4>
+                </div>
+                <div class="card-body">
+                    {% if past_bookings %}
+                        {% for booking in past_bookings %}
+                            <div class="booking-item mb-3 p-3 border rounded">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h5>{{ booking.movie.name }}</h5>
+                                        <p class="mb-1"><strong>Theater:</strong> {{ booking.theater.name }}</p>
+                                        <p class="mb-1"><strong>Show Time:</strong> {{ booking.theater.time|date:"F d, Y g:i A" }}</p>
+                                        <p class="mb-1"><strong>Seat:</strong> {{ booking.seat.seat_number }}</p>
+                                        <p class="mb-1"><strong>Amount Paid:</strong> ₹{{ booking.amount_paid }}</p>
+                                        <p class="mb-0"><small class="text-muted">Booked on: {{ booking.booked_at|date:"F d, Y g:i A" }}</small></p>
+                                    </div>
+                                    <div class="col-md-4 text-right">
+                                        <span class="badge badge-secondary">Past</span>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No past bookings</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" role="dialog" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editProfileModalLabel">Edit Profile</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="post" action="{% url 'edit_profile' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" class="form-control" name="phone_number" value="{{ user.profile.phone_number }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Address</label>
+                        <textarea class="form-control" name="address" rows="3">{{ user.profile.address }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .booking-item:hover {
+        background-color: #f8f9fa;
+        transition: background-color 0.3s;
+    }
+
+    .badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+    }
+
+    .booking-card {
+        border: 1px solid #ddd;
+        padding: 15px;
+        border-radius: 8px;
+        transition: transform 0.2s;
+    }
+    .booking-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .booking-card img {
+        max-height: 150px;
+        object-fit: cover;
+        border-radius: 4px;
+    }
+    .profile-info p {
+        margin-bottom: 0.5rem;
+    }
+    .list-group-item {
+        transition: background-color 0.2s;
+    }
+    .list-group-item:hover {
+        background-color: #f8f9fa;
+    }
+    .card-header {
+        border-bottom: 0;
+    }
+    .table th {
+        border-top: none;
+    }
+</style>
+{% endblock %}

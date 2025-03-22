@@ -1,0 +1,300 @@
+{% extends "users/basic.html" %}
+{% block content %}
+
+<style>
+  body {
+    font-family: Arial, sans-serif;
+  }
+  
+  .seat-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  /* 🔹 Seat Styling */
+  .seat {
+    width: 35px;
+    height: 35px;
+    border: 2px solid #28a745;
+    margin: 4px;
+    text-align: center;
+    line-height: 35px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s, color 0.3s, transform 0.2s;
+  }
+  
+  .seat:hover {
+    background-color: #28a745;
+    color: white;
+    transform: scale(1.1);
+  }
+  
+  /* 🔹 Seat Status */
+  .seat.selected {
+    background-color: #007bff !important;
+    color: white;
+    border: 2px solid #0056b3;
+  }
+  
+  .seat.sold {
+    background-color: #dc3545 !important;
+    color: white;
+    border: 2px solid #dc3545;
+    cursor: not-allowed;
+  }
+
+  .seat.available {
+    background-color: white;
+  }
+
+  /* 🔹 Screen */
+  .screen {
+    margin: 20px auto;
+    background-color: #ccc;
+    height: 50px;
+    text-align: center;
+    line-height: 50px;
+    color: #666;
+    font-weight: bold;
+    border-radius: 10px;
+    width: 50%;
+  }
+
+  /* 🔹 Seat Legend */
+  .legend {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    margin: 0 15px;
+    font-size: 14px;
+  }
+
+  .legend-item .seat {
+    margin-right: 5px;
+  }
+
+  .row-label {
+    width: 30px;
+    text-align: center;
+    margin-right: 10px;
+    font-weight: bold;
+  }
+
+  .seat-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 5px 0;
+  }
+
+  /* Add animation for seat status changes */
+  .seat {
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .seat.updating {
+    animation: pulse 1s infinite;
+  }
+  
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+</style>
+
+<div class="container mt-5">
+  <div class="row">
+    <div class="col-lg-8 mx-auto">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title text-center">Select Your Seats</h5>
+          <h6 class="text-center mb-4">{{ theater.movie.name }} - {{ theater.time|date:"F d, Y g:i A" }}</h6>
+
+          <!-- Real-time status message -->
+          <div id="status-message" class="alert alert-info d-none">
+            Seat status updated
+          </div>
+
+          <!-- 🔹 Seat Legend -->
+          <div class="legend">
+            <div class="legend-item">
+              <div class="seat available"></div> Available
+            </div>
+            <div class="legend-item">
+              <div class="seat selected"></div> Selected
+            </div>
+            <div class="legend-item">
+              <div class="seat sold"></div> Sold
+            </div>
+          </div>
+
+          <div class="screen">All eyes this way please!</div>
+
+          <form method="POST" id="seat-form">
+            {% csrf_token %}
+            <div class="seat-container">
+              {% for row, seats in seat_rows %}
+              <div class="seat-row">
+                <div class="row-label">{{ row }}</div>
+                {% for seat in seats %}
+                  <div class="seat {% if seat.is_booked %}sold{% elif not seat.is_available %}reserved{% else %}available{% endif %}" 
+                       data-seat-id="{{ seat.id }}"
+                       data-seat-number="{{ seat.seat_number }}">
+                    {% if not seat.is_booked and seat.is_available %}
+                      <input type="checkbox" name="seats" value="{{ seat.id }}" class="seat-checkbox d-none" />
+                      {{ seat.seat_number }}
+                    {% else %}
+                      {{ seat.seat_number }}
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+              {% endfor %}
+            </div>
+
+            <div class="text-center mt-4">
+              <button type="submit" class="btn btn-success btn-lg">Proceed to Payment</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const seatElements = document.querySelectorAll(".seat");
+  const form = document.getElementById("seat-form");
+  const statusMessage = document.getElementById("status-message");
+  let socket;
+
+  // Connect to WebSocket
+  function connectWebSocket() {
+    const theaterId = '{{ theater.id }}';
+    const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsUrl = `${wsScheme}://${window.location.host}/ws/theater/${theaterId}/`;
+    
+    socket = new WebSocket(wsUrl);
+
+    socket.onopen = function(e) {
+      console.log('WebSocket connected');
+    };
+
+    socket.onmessage = function(e) {
+      const data = JSON.parse(e.data);
+      
+      if (data.type === 'seat_status') {
+        // Update all seats
+        updateAllSeats(data.seats);
+      } else if (data.type === 'seat_status_update') {
+        // Update single seat
+        updateSeatStatus(data.seat_id, data.status);
+      }
+    };
+
+    socket.onclose = function(e) {
+      console.log('WebSocket disconnected. Attempting to reconnect...');
+      setTimeout(connectWebSocket, 2000);
+    };
+
+    socket.onerror = function(err) {
+      console.error('WebSocket error:', err);
+    };
+  }
+
+  // Update all seats based on initial status
+  function updateAllSeats(seats) {
+    seats.forEach(seat => {
+      const seatElement = document.querySelector(`[data-seat-id="${seat.id}"]`);
+      if (seatElement) {
+        updateSeatElement(seatElement, seat.is_booked ? 'booked' : 'available');
+      }
+    });
+  }
+
+  // Update single seat status
+  function updateSeatStatus(seatId, status) {
+    const seatElement = document.querySelector(`[data-seat-id="${seatId}"]`);
+    if (seatElement) {
+      updateSeatElement(seatElement, status);
+      
+      // Show status message
+      statusMessage.textContent = `Seat ${seatElement.dataset.seatNumber} is now ${status}`;
+      statusMessage.classList.remove('d-none');
+      setTimeout(() => statusMessage.classList.add('d-none'), 3000);
+    }
+  }
+
+  // Update seat element classes and state
+  function updateSeatElement(seatElement, status) {
+    seatElement.classList.remove('available', 'sold', 'selected');
+    seatElement.classList.add('updating');
+    
+    setTimeout(() => {
+      seatElement.classList.remove('updating');
+      if (status === 'booked') {
+        seatElement.classList.add('sold');
+        const checkbox = seatElement.querySelector('.seat-checkbox');
+        if (checkbox) {
+          checkbox.remove();
+        }
+      } else {
+        seatElement.classList.add('available');
+      }
+    }, 300);
+  }
+
+  // Handle seat clicks
+  seatElements.forEach(seat => {
+    if (!seat.classList.contains('sold')) {
+      seat.addEventListener("click", function () {
+        const checkbox = this.querySelector(".seat-checkbox");
+        if (checkbox) {
+          checkbox.checked = !checkbox.checked;
+          this.classList.toggle("selected", checkbox.checked);
+        }
+      });
+    }
+  });
+
+  // Handle form submission
+  form.addEventListener("submit", function(e) {
+    e.preventDefault();
+    const selectedSeats = document.querySelectorAll(".seat-checkbox:checked");
+    
+    if (selectedSeats.length === 0) {
+      alert("Please select at least one seat");
+      return;
+    }
+    
+    // Update selected seats status via WebSocket before form submission
+    selectedSeats.forEach(checkbox => {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 'seat_update',
+          seat_id: checkbox.value,
+          status: 'booked'
+        }));
+      }
+    });
+    
+    // Submit form after a short delay to allow WebSocket updates
+    setTimeout(() => this.submit(), 500);
+  });
+
+  // Initialize WebSocket connection
+  connectWebSocket();
+});
+</script>
+
+{% endblock %}

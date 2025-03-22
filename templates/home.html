@@ -1,0 +1,98 @@
+{% extends "users/basic.html" %} 
+
+{% block content %}
+<style>
+    .card {
+        transition: transform 0.3s, box-shadow 0.3s;
+        border: none;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    .card-img-top {
+        object-fit: cover;
+        height: 250px;
+        width: 100%;
+    }
+    .card-body {
+        background-color: #fff;
+        padding: 15px;
+        text-align: center;
+    }
+    .card-title {
+        font-size: 18px;
+        font-weight: bold;
+    }
+    .card-text {
+        font-size: 14px;
+        color: #666;
+    }
+    .see-more {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+    }
+</style>
+
+<div class="container mt-4">
+    <div style="background: #f0f0f0; padding: 10px; margin: 10px 0;">
+        Debug Info:
+        <br>Today: {{ today }}
+        <br>Debug Message: {{ debug_message }}
+        <br>Shows available: {{ shows|length }}
+        <br>Raw shows data: {{ shows }}
+    </div>
+    <h2 class="text-center">All Today's Shows</h2>
+    <div class="row">
+        {% for show in today_shows %}
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <img src="{{ show.movie.image.url }}" class="card-img-top" alt="{{ show.movie.name }}">
+                <div class="card-body">
+                    <h5 class="card-title">{{ show.movie.name }}</h5>
+                    <p class="card-text">{{ show.theater.name }}</p>
+                    <p class="card-text"><strong>Time:</strong> {{ show.time }}</p>
+                    <a href="{% url 'theater_list' show.movie.id %}" class="btn btn-primary">Book Now</a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p class="text-center">No shows available today.</p>
+        {% endfor %}
+    </div>
+</div>
+
+    <!-- See More button -->
+    <div class="text-center mt-4">
+        <a href="{% url 'today_shows' %}" class="btn btn-secondary">See All Shows</a>
+    </div>
+
+    <!-- Recommended Movies Section -->
+    {% if movies %}
+    <h2 class="text-center mt-5">Recommended Movies</h2>
+    <div class="row mt-4">
+        {% for movie in movies %}
+        <div class="col-md-3">
+            <div class="card mb-4">
+                {% if movie.image %}
+                    <img src="{{ movie.image.url }}" class="card-img-top" alt="{{ movie.name }}">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ movie.name }}</h5>
+                    <a href="{% url 'theater_list' movie.id %}" class="btn btn-primary">View Details</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+{% endblock %}

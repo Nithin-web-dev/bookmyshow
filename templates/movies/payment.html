@@ -1,0 +1,203 @@
+{% extends 'users/basic.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Payment Details</h3>
+                </div>
+                <div class="card-body">
+                    <!-- Booking Summary -->
+                    <div class="booking-summary mb-4">
+                        <h4>Booking Summary</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Movie:</strong> {{ theater.movie.name }}</p>
+                                <p><strong>Theater:</strong> {{ theater.name }}</p>
+                                <p><strong>Show Time:</strong> {{ theater.time|date:"F d, Y g:i A" }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Selected Seats:</strong> 
+                                    {% for seat in selected_seats %}
+                                        {{ seat.seat_number }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                </p>
+                                <p><strong>Total Seats:</strong> {{ total_seats }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Price Breakdown -->
+                    <div class="price-breakdown mb-4">
+                        <h4>Price Details</h4>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <tr>
+                                    <td>Base Price per Ticket</td>
+                                    <td>₹{{ base_price }}</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        Dynamic Price Adjustment
+                                        <i class="fas fa-info-circle" data-toggle="tooltip" 
+                                           title="Price adjusted based on demand and time to show"></i>
+                                    </td>
+                                    <td class="{% if price_difference > 0 %}text-danger{% else %}text-success{% endif %}">
+                                        {% if price_difference > 0 %}+{% endif %}₹{{ price_difference }}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Final Price per Ticket</td>
+                                    <td>₹{{ dynamic_price }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Number of Tickets</td>
+                                    <td>× {{ total_seats }}</td>
+                                </tr>
+                                <tr class="table-active">
+                                    <th>Total Amount</th>
+                                    <th>₹{{ total_price }}</th>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Timer -->
+                    <div class="alert alert-warning" id="timer">
+                        Time remaining to complete payment: <span id="countdown"></span>
+                    </div>
+
+                    <!-- Payment Form -->
+                    <form method="post" id="payment-form" action="{% url 'payment' theater.id %}">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label>Card Number</label>
+                            <input type="text" class="form-control" name="card_number" pattern="[0-9\s]{13,19}" maxlength="19" placeholder="1234 5678 9012 3456" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Expiry Date</label>
+                                    <input type="text" class="form-control" name="expiry" pattern="(0[1-9]|1[0-2])\/([0-9]{2})" placeholder="MM/YY" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>CVV</label>
+                                    <input type="text" class="form-control" name="cvv" pattern="[0-9]{3,4}" maxlength="4" placeholder="123" required>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block mt-4">
+                            Pay ₹{{ total_price }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.price-breakdown {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+}
+.booking-summary {
+    background: #e9ecef;
+    padding: 20px;
+    border-radius: 8px;
+}
+.table th, .table td {
+    padding: 12px;
+}
+</style>
+
+<script>
+// Initialize tooltips
+$(function () {
+    $('[data-toggle="tooltip"]').tooltip()
+})
+
+// Countdown timer
+function startCountdown() {
+    const reservationTime = new Date("{{ reservation_time|date:'c' }}");
+    const timeLimit = 5 * 60 * 1000; // 5 minutes in milliseconds
+    
+    function updateTimer() {
+        const now = new Date();
+        const timeElapsed = now - reservationTime;
+        const timeLeft = timeLimit - timeElapsed;
+        
+        if (timeLeft <= 0) {
+            alert("Reservation time expired. You will be redirected to seat selection.");
+            window.location.href = "{% url 'book_seats' theater.id %}";
+            return;
+        }
+        
+        const minutes = Math.floor(timeLeft / 60000);
+        const seconds = Math.floor((timeLeft % 60000) / 1000);
+        
+        document.getElementById('countdown').textContent = 
+            `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+    
+    setInterval(updateTimer, 1000);
+    updateTimer();
+}
+
+// Start countdown when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    startCountdown();
+});
+
+// Form validation and submission
+document.getElementById('payment-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Basic form validation
+    const cardNumber = this.querySelector('input[name="card_number"]').value.replace(/\s/g, '');
+    const expiry = this.querySelector('input[name="expiry"]').value;
+    const cvv = this.querySelector('input[name="cvv"]').value;
+    
+    if (!/^[0-9]{13,19}$/.test(cardNumber)) {
+        alert('Please enter a valid card number');
+        return;
+    }
+    
+    if (!/^(0[1-9]|1[0-2])\/([0-9]{2})$/.test(expiry)) {
+        alert('Please enter a valid expiry date (MM/YY)');
+        return;
+    }
+    
+    if (!/^[0-9]{3,4}$/.test(cvv)) {
+        alert('Please enter a valid CVV');
+        return;
+    }
+    
+    // If validation passes, submit the form
+    this.submit();
+});
+
+// Format card number input with spaces
+document.querySelector('input[name="card_number"]').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\s/g, '');
+    if (value.length > 0) {
+        value = value.match(new RegExp('.{1,4}', 'g')).join(' ');
+    }
+    e.target.value = value;
+});
+
+// Format expiry date input
+document.querySelector('input[name="expiry"]').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length >= 2) {
+        value = value.slice(0, 2) + '/' + value.slice(2);
+    }
+    e.target.value = value;
+});
+</script>
+{% endblock %} 

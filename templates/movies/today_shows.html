@@ -1,0 +1,31 @@
+{% extends "users/basic.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div style="background: #f0f0f0; padding: 10px; margin: 10px 0;">
+        Debug Info:
+        <br>Today: {{ today }}
+        <br>Debug Message: {{ debug_message }}
+        <br>Shows available: {{ shows|length }}
+        <br>Raw shows data: {{ shows }}
+    </div>
+    <h2 class="text-center">All Today's Shows</h2>
+    <div class="row">
+        {% for show in today_shows %}
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <img src="{{ show.movie.image.url }}" class="card-img-top" alt="{{ show.movie.name }}">
+                <div class="card-body">
+                    <h5 class="card-title">{{ show.movie.name }}</h5>
+                    <p class="card-text">{{ show.theater.name }}</p>
+                    <p class="card-text"><strong>Time:</strong> {{ show.time }}</p>
+                    <a href="{% url 'theater_list' show.movie.id %}" class="btn btn-primary">Book Now</a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p class="text-center">No shows available today.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
