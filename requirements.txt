@@ -1,12 +1,7 @@
 asgiref==3.7.2
-channels==4.0.0
+dj-database-url
 Django==3.2.19
-django-crispy-forms==2.1
-crispy-bootstrap5==2023.10
-Pillow==10.2.0
-psycopg2-binary==2.9.9
-python-dotenv==1.0.1
+gunicorn==20.1.0
+psycopg2-binary
 sqlparse==0.4.4
-typing-extensions==4.9.0
-gunicorn==21.2.0
-dj-database-url==2.1.0
+typing_extensions==4.7.0
